@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from app.models.course import Course
+from app.models.student import Student
 from app import db
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 admin_bp = Blueprint("admin_api", __name__)
 
@@ -93,3 +95,90 @@ def delete_course(course_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Erro ao excluir curso {str(e)}"}), 500
+    
+@admin_bp.route("/students", methods=["POST"])
+def create_student():
+    data = request.get_json()
+
+    if not data or not data.get("full_name") or not data.get("email") or not data.get("cpf"):
+        return jsonify({"message": "Dados obrigatórios: nome completo, email e CPF"}), 400
+    
+    if len(data["cpf"]) < 11 or len(data["cpf"]) > 14:
+        return jsonify({"message": "Formato de CPF inválido"}), 400
+    
+    try:
+        new_student = Student(
+            full_name=data["full_name"],
+            email=data["email"],
+            cpf=data["cpf"]
+        )
+        db.session.add(new_student)
+        db.session.commit()
+        return jsonify(new_student.to_dict()), 201
+    
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"message": "Email ou CPF já cadastrados"})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Erro ao criar o estudante: {str(e)}"}), 500
+    
+@admin_bp.route("/students", methods=["GET"])
+def get_students():
+    try:
+        students = Student.query.all()
+        return jsonify([student.to_dict() for student in students]), 200
+    
+    except Exception as e:
+        return jsonify({"message": f"Erro ao buscar estudantes: {str(e)}"}), 500
+    
+@admin_bp.route("/students/<int:student_id>", methods=["PUT"])
+def update_student(student_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "Nenhum dado foi passado para atualizar"})
+    
+    try:
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({"message": "Id do estudante não encontrado"})
+        
+        if "full_name" in data:
+            student.full_name = data["full_name"]
+        if "email" in data:
+            student.email = data["email"]
+        if "cpf" in data:
+            if len(data["cpf"]) < 11 or len(data["cpf"]) > 14:
+                return jsonify({"message": "Formato de cpf inválido"})
+            student.cpf = data["cpf"]
+
+        db.session.commit()
+        return jsonify(student.to_dict()), 200
+    
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"message": "Email ou CPF já cadastrado por outro estudante"}), 409
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Erro ao atualizar estudante: {str(e)}"}), 500
+
+@admin_bp.route("/students/<int:student_id>", methods=["DELETE"])
+def delete_student(student_id):
+    try:
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({"message": "Estudante não encontrado"})
+        
+        db.session.delete(student)
+        db.session.commit()
+        return jsonify({"message": f"Estudante excluído com sucesso!"}), 200
+    
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"message": f"Erro de integridade ao excluir aluno. Verifique se existem certificados associados ao estudante: {str(e)}"}), 400
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Erro ao excluir o estudante: {str(e)}"}), 500
