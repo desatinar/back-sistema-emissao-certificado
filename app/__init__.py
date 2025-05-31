@@ -12,9 +12,14 @@ def create_app(config=Config):
     db.init_app(app)
     CORS(app)
 
+    from app.models.user import User
+    from app.models.course import Course
+    from app.models.student import Student
+    from app.models.certificate import Certificate
+
     with app.app_context():
         db.create_all()
-        print("Banco de dados inicializado")
+        print("Tabelas inicializadas!")
 
     @app.route("/ping")
     def ping():
