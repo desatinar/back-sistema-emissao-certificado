@@ -17,6 +17,10 @@ def create_app(config=Config):
     from app.models.student import Student
     from app.models.certificate import Certificate
 
+    from .routes.admin_routes import admin_bp
+
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
+
     with app.app_context():
         db.create_all()
         print("Tabelas inicializadas!")
