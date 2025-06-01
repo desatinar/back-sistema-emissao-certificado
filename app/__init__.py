@@ -5,16 +5,23 @@ from config import Config
 
 db = SQLAlchemy()
 
-def create_app(config=Config):
+def create_app(config_class=Config):
     app = Flask(__name__)
-    app.config.from_object(config)
+    app.config.from_object(config_class)
 
     allowed_origins = [
     "http://localhost:5173",
 ]
 
     db.init_app(app)
-    CORS(app, origins=allowed_origins, supports_credentials=True)
+
+    CORS(
+        app, 
+        origins=allowed_origins,
+        supports_credentials=True,
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"]
+        )
 
     from app.models.user import User
     from app.models.course import Course
