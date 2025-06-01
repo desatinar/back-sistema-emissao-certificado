@@ -9,8 +9,12 @@ def create_app(config=Config):
     app = Flask(__name__)
     app.config.from_object(config)
 
+    allowed_origins = [
+    "http://localhost:5173",
+]
+
     db.init_app(app)
-    CORS(app, supports_credentials=True)
+    CORS(app, origins=allowed_origins, supports_credentials=True)
 
     from app.models.user import User
     from app.models.course import Course
