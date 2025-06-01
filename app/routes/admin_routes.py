@@ -2,8 +2,10 @@ from flask import Blueprint, request, jsonify, session
 from functools import wraps
 from app.models.course import Course
 from app.models.student import Student
+from app.models.certificate import Certificate
 from app import db
 from datetime import datetime
+from datetime import date
 from sqlalchemy.exc import IntegrityError
 
 admin_bp = Blueprint("admin_api", __name__)
@@ -200,3 +202,48 @@ def delete_student(student_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Erro ao excluir o estudante: {str(e)}"}), 500
+    
+@admin_bp.route("/certificates/issue", methods=["POST"])
+@admin_required
+def issue_certificate():
+    data = request.get_json()
+    student_id = data.get("student_id")
+    course_id = data.get("course_id")
+
+    if not student_id or not course_id:
+        return jsonify({"message": "ID do aluno e ID do curso são obrigatórios"}), 400
+    
+    student = Student.query.get(student_id)
+    course = Course.query.get(course_id)
+
+    if not student:
+        return jsonify({"message": f"Aluno com com id {student_id} não encontrado"}), 400
+    if not course:
+        return jsonify({"message": f"Curso com ID {course_id} não encontrado"}), 400
+    
+    existing_certificate = Certificate.query.filter_by(
+        student_id=student_id,
+        course_id=course_id
+    ).first()
+
+    if existing_certificate:
+        return jsonify({
+            "message": "Certificado já emitido com esse aluno e curso",
+            "certificate": existing_certificate.to_dict()
+        }), 409
+    
+    try:
+        new_certificate = Certificate(
+            student_id=student_id,
+            course_id=course_id
+        )
+        db.session.add(new_certificate)
+        db.session.commit()
+        return jsonify({
+            "message": "Certificado emitido com sucesso!",
+            "certificate": new_certificate.to_dict()
+        }), 201
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Erro ao emitir o certificado {str(e)}"}), 500
