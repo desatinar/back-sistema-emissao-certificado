@@ -14,7 +14,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "admin_id" not in session:
-            return jsonify({"message": "Acesso não autorizado"})
+            return jsonify({"message": "Acesso não autorizado"}), 401
         
         return f(*args, **kwargs)
     return decorated_function
