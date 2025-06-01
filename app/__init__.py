@@ -10,7 +10,7 @@ def create_app(config=Config):
     app.config.from_object(config)
 
     db.init_app(app)
-    CORS(app)
+    CORS(app, supports_credentials=True)
 
     from app.models.user import User
     from app.models.course import Course
@@ -18,8 +18,10 @@ def create_app(config=Config):
     from app.models.certificate import Certificate
 
     from .routes.admin_routes import admin_bp
+    from .routes.auth_routes import auth_bp
 
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     with app.app_context():
         db.create_all()

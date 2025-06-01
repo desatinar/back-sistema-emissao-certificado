@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
+from functools import wraps
 from app.models.course import Course
 from app.models.student import Student
 from app import db
@@ -7,7 +8,17 @@ from sqlalchemy.exc import IntegrityError
 
 admin_bp = Blueprint("admin_api", __name__)
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "admin_id" not in session:
+            return jsonify({"message": "Acesso não autorizado"})
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 @admin_bp.route("/courses", methods=["POST"])
+@admin_required
 def create_course():
     data = request.get_json()
 
@@ -40,6 +51,7 @@ def create_course():
         return jsonify({"message": f"Erro ao criar curso: {str(e)}"}), 500
     
 @admin_bp.route("/courses", methods=["GET"])
+@admin_required
 def get_courses():
     try:
         courses = Course.query.all()
@@ -49,6 +61,7 @@ def get_courses():
         return jsonify({"message": f"Erro ao buscar cursos: {str(e)}"}), 500
     
 @admin_bp.route("/courses/<int:course_id>", methods=["PUT"])
+@admin_required
 def update_course(course_id):
     data = request.get_json()
     if not data:
@@ -82,6 +95,7 @@ def update_course(course_id):
         return jsonify({"message": f"Erro ao atualizar curso: {str(e)}"}), 500
     
 @admin_bp.route("/courses/<int:course_id>", methods=["DELETE"])
+@admin_required
 def delete_course(course_id):
     try:
         course = Course.query.get(course_id)
@@ -97,6 +111,7 @@ def delete_course(course_id):
         return jsonify({"message": f"Erro ao excluir curso {str(e)}"}), 500
     
 @admin_bp.route("/students", methods=["POST"])
+@admin_required
 def create_student():
     data = request.get_json()
 
@@ -125,6 +140,7 @@ def create_student():
         return jsonify({"message": f"Erro ao criar o estudante: {str(e)}"}), 500
     
 @admin_bp.route("/students", methods=["GET"])
+@admin_required
 def get_students():
     try:
         students = Student.query.all()
@@ -134,6 +150,7 @@ def get_students():
         return jsonify({"message": f"Erro ao buscar estudantes: {str(e)}"}), 500
     
 @admin_bp.route("/students/<int:student_id>", methods=["PUT"])
+@admin_required
 def update_student(student_id):
     data = request.get_json()
     if not data:
@@ -165,6 +182,7 @@ def update_student(student_id):
         return jsonify({"message": f"Erro ao atualizar estudante: {str(e)}"}), 500
 
 @admin_bp.route("/students/<int:student_id>", methods=["DELETE"])
+@admin_required
 def delete_student(student_id):
     try:
         student = Student.query.get(student_id)
