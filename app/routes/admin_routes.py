@@ -56,7 +56,6 @@ def update_admin(admin_id):
     password = data.get('password')
 
     if email:
-        # Verificar se o novo email já existe em outro admin
         existing_admin = User.query.filter_by(email=email).first()
         if existing_admin and existing_admin.id != admin.id:
             return jsonify({'error': 'Email já está em uso.'}), 400
@@ -314,3 +313,12 @@ def issue_certificate():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Erro ao emitir o certificado {str(e)}"}), 500
+    
+@admin_bp.route("/certificates", methods=["GET"])
+@admin_required
+def get_certificates():
+    try:
+        certificates = Certificate.query.all()
+        return jsonify([certificate.to_dict() for certificate in certificates]), 200
+    except Exception as e:
+        return jsonify({"message": f"Erro ao buscar certificados: {str(e)}"}), 500
