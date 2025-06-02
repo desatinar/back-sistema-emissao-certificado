@@ -11,7 +11,8 @@ def create_app(config_class=Config):
 
     allowed_origins = [
     "http://localhost:5173",
-    "https://desatinar.pythonanywhere.com"
+    "https://desatinar.pythonanywhere.com",
+    "https://emissao-certificados.netlify.app/",
 ]
 
     db.init_app(app)
