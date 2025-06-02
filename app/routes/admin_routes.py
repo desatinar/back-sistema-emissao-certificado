@@ -3,6 +3,7 @@ from functools import wraps
 from app.models.course import Course
 from app.models.student import Student
 from app.models.certificate import Certificate
+from app.models.user import User
 from app import db
 from datetime import datetime
 from datetime import date
@@ -18,6 +19,72 @@ def admin_required(f):
         
         return f(*args, **kwargs)
     return decorated_function
+
+@admin_bp.route('/admins', methods=['POST'])
+def create_admin():
+    data = request.get_json()
+
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'error': 'Email e senha são obrigatórios.'}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email já cadastrado.'}), 400
+
+    new_admin = User(
+        email=email
+    )
+    new_admin.set_password(password)
+
+    db.session.add(new_admin)
+    db.session.commit()
+
+    return jsonify({'message': 'Admin criado com sucesso!', 'admin': new_admin.to_dict()}), 201
+
+@admin_bp.route('/admins/<int:admin_id>', methods=['PUT'])
+def update_admin(admin_id):
+    admin = User.query.get(admin_id)
+
+    if not admin:
+        return jsonify({'error': 'Admin não encontrado.'}), 404
+
+    data = request.get_json()
+
+    email = data.get('email')
+    password = data.get('password')
+
+    if email:
+        # Verificar se o novo email já existe em outro admin
+        existing_admin = User.query.filter_by(email=email).first()
+        if existing_admin and existing_admin.id != admin.id:
+            return jsonify({'error': 'Email já está em uso.'}), 400
+        admin.email = email
+
+    if password:
+        admin.set_password(password)
+
+    db.session.commit()
+
+    return jsonify({'message': 'Admin atualizado com sucesso!', 'admin': admin.to_dict()}), 200
+
+@admin_bp.route('/admins/<int:admin_id>', methods=['DELETE'])
+def delete_admin(admin_id):
+    admin = User.query.get(admin_id)
+
+    if not admin:
+        return jsonify({'error': 'Admin não encontrado.'}), 404
+
+    db.session.delete(admin)
+    db.session.commit()
+
+    return jsonify({'message': 'Admin deletado com sucesso!'}), 200
+
+@admin_bp.route('/admins', methods=['GET'])
+def get_admins():
+    admins = User.query.all()
+    return jsonify([admin.to_dict() for admin in admins]), 200
 
 @admin_bp.route("/courses", methods=["POST"])
 @admin_required
