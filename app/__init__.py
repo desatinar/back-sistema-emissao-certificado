@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from config import Config
@@ -10,10 +10,10 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     allowed_origins = [
-    "http://localhost:5173",
-    "https://desatinar.pythonanywhere.com",
-    "https://emissao-certificados.netlify.app/",
-]
+        "http://localhost:5173",
+        "https://desatinar.pythonanywhere.com",
+        "https://emissao-certificados.netlify.app"
+    ]
 
     db.init_app(app)
 
@@ -23,7 +23,7 @@ def create_app(config_class=Config):
         supports_credentials=True,
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"]
-        )
+    )
 
     from app.models.user import User
     from app.models.course import Course
@@ -38,6 +38,12 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(public_bp, url_prefix="/api/public")
 
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        return response
+
     with app.app_context():
         db.create_all()
         print("Tabelas inicializadas!")
@@ -45,5 +51,14 @@ def create_app(config_class=Config):
     @app.route("/ping")
     def ping():
         return "pong!"
+
+    @app.route('/debug-cors', methods=['GET', 'OPTIONS'])
+    def debug_cors():
+        origin = request.headers.get('Origin')
+        return {
+            'received_origin': origin,
+            'allowed_origins': allowed_origins,
+            'access_control_allow_origin': response.headers.get('Access-Control-Allow-Origin') if 'response' in locals() else None
+        }, 200
     
     return app
